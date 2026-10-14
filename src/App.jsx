@@ -78,44 +78,28 @@ function buildAnswers({ app, paid, about, problems, age, customAge, installs, cu
 
   const q10 = `I decided ${name} was ready because testers could complete the main tasks in the app without major problems. The serious bugs found during testing were fixed, the app ran stably on the devices that were used, and later feedback was mostly small improvement suggestions rather than critical issues. I plan to keep improving the app after launch based on user reviews.`;
 
-  return `${name} – Production Access Answers
+  // gap between a question and its answer: 1 blank line
+  // gap between questions / sections: 3 blank lines
+  const qa = (q, a) => `${q}\n\n${a}`;
 
-Part 1: About your closed test
-
-Q1. How did you recruit your testers?
-${q1}
-
-Q2. How easy was it to recruit testers for your closed test?
-${q2}
-
-Q3. Describe how testers engaged with your app during the closed test.
-${q3}
-
-Q4. Summarize the feedback you received and how you collected it.
-${q4}
-
-Q5. Which feedback did you act on, and what changes did you make?
-${q5}
-
-Part 2: About your app
-
-Q6. What is the app for, and who is the intended audience?
-${q6}
-
-Q7. How does your app provide value to users?
-${q7}
-
-Q8. How many installs do you expect in your first year?
-${q8}
-
-Part 3: Production readiness
-
-Q9. What changes did you make to your app based on the closed test?
-${q9}
-
-Q10. How did you decide your app is ready for production?
-${q10}
-`;
+  return (
+    [
+      `${name} – Production Access Answers`,
+      `Part 1: About your closed test`,
+      qa("Q1. How did you recruit your testers?", q1),
+      qa("Q2. How easy was it to recruit testers for your closed test?", q2),
+      qa("Q3. Describe how testers engaged with your app during the closed test.", q3),
+      qa("Q4. Summarize the feedback you received and how you collected it.", q4),
+      qa("Q5. Which feedback did you act on, and what changes did you make?", q5),
+      `Part 2: About your app`,
+      qa("Q6. What is the app for, and who is the intended audience?", q6),
+      qa("Q7. How does your app provide value to users?", q7),
+      qa("Q8. How many installs do you expect in your first year?", q8),
+      `Part 3: Production readiness`,
+      qa("Q9. What changes did you make to your app based on the closed test?", q9),
+      qa("Q10. How did you decide your app is ready for production?", q10),
+    ].join("\n\n\n\n") + "\n"
+  );
 }
 
 const box = "rounded-xl border border-slate-700 bg-slate-900/70 p-3";
