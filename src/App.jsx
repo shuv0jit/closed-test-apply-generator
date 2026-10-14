@@ -1,24 +1,24 @@
 import { useMemo, useState } from "react";
 
 const PROBLEMS = [
-  { id: "icon", label: "Icon changed", fb: "the app icon, which they felt could look clearer", fix: "updated the app icon to a cleaner, clearer design" },
-  { id: "bug", label: "Bug fix", fb: "a few bugs and small glitches", fix: "fixed the bugs that testers reported" },
-  { id: "server", label: "Server problem", fb: "occasional server problems and slow responses", fix: "fixed the server issues and made connections more stable" },
-  { id: "crash", label: "Crash fix", fb: "a few crashes on some devices", fix: "fixed the crashes found on different devices" },
-  { id: "ui", label: "UI improvement", fb: "parts of the layout that were confusing", fix: "improved the layout so the screens are easier to follow" },
-  { id: "screen", label: "Small screen layout", fb: "layout problems on some screen sizes", fix: "fixed the layout on smaller screens" },
-  { id: "speed", label: "Slow loading", fb: "slow loading in some places", fix: "improved loading speed across the app" },
-  { id: "login", label: "Login issue", fb: "trouble signing in", fix: "fixed the sign-in problems" },
-  { id: "text", label: "Text / typo fix", fb: "typos and unclear wording", fix: "corrected the text and wording throughout the app" },
-  { id: "nav", label: "Easier navigation", fb: "some options that were hard to find", fix: "made navigation simpler so options are easier to find" },
-  { id: "dark", label: "Dark mode", fb: "requests for a dark theme", fix: "added dark mode support" },
-  { id: "perm", label: "Permission prompts", fb: "confusion about permission requests", fix: "made permission prompts clearer" },
-  { id: "feature", label: "Small feature added", fb: "requests for a few small extra features", fix: "added a few of the most requested small features" },
-  { id: "notif", label: "Notification fix", fb: "problems with notifications", fix: "fixed the notification issues" },
+  { id: "icon", label: "Icon changed", fb: "the app icon", fix: "updated the app icon" },
+  { id: "bug", label: "Bug fix", fb: "a few bugs", fix: "fixed the reported bugs" },
+  { id: "server", label: "Server problem", fb: "server problems", fix: "fixed server issues" },
+  { id: "crash", label: "Crash fix", fb: "some crashes", fix: "fixed crashes" },
+  { id: "ui", label: "UI improvement", fb: "confusing layouts", fix: "improved the layout" },
+  { id: "screen", label: "Small screen layout", fb: "small-screen layout issues", fix: "fixed small-screen layouts" },
+  { id: "speed", label: "Slow loading", fb: "slow loading", fix: "sped up loading" },
+  { id: "login", label: "Login issue", fb: "sign-in trouble", fix: "fixed sign-in problems" },
+  { id: "text", label: "Text / typo fix", fb: "typos", fix: "corrected typos" },
+  { id: "nav", label: "Easier navigation", fb: "hard-to-find options", fix: "simplified navigation" },
+  { id: "dark", label: "Dark mode", fb: "dark mode requests", fix: "added dark mode" },
+  { id: "perm", label: "Permission prompts", fb: "unclear permission prompts", fix: "clarified permission prompts" },
+  { id: "feature", label: "Small feature added", fb: "requests for small features", fix: "added small requested features" },
+  { id: "notif", label: "Notification fix", fb: "notification problems", fix: "fixed notifications" },
 ];
 
 const AGES = ["13-18", "15-45", "18-45", "13-70"];
-const INSTALLS = ["1000-5000", "1000-10000"];
+const INSTALLS = ["0 to 10K", "10K to 100K", "100K to 1M"];
 
 const fmtRange = (s) =>
   s
@@ -36,70 +36,150 @@ const endDot = (s) => {
   return !t ? "" : /[.!?]$/.test(t) ? t : t + ".";
 };
 
-function buildAnswers({ app, paid, about, problems, age, customAge, installs, customInstalls }) {
+// Cuts text to the last full sentence that fits inside the limit.
+const clamp = (t, l) => {
+  if (t.length <= l) return t;
+  const parts = t.match(/[^.!?]+[.!?]+\s*/g) || [];
+  let out = "";
+  for (const p of parts) {
+    if ((out + p).trimEnd().length > l) break;
+    out += p;
+  }
+  if (out.trim()) return out.trim();
+  const cut = t.slice(0, l - 1);
+  return cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:\s]+$/, "") + ".";
+};
+
+// Tries all items first, then drops items from the end until the answer fits.
+const fitItems = (items, make, l) => {
+  for (let n = items.length; n >= 0; n--) {
+    const t = make(items.slice(0, n));
+    if (t.length <= l) return { t, trimmed: n < items.length };
+  }
+  return { t: clamp(make([]), l), trimmed: items.length > 0 };
+};
+
+function buildAnswers({ app, paid, about, problems, age, customAge, installs, limit }) {
   const name = app.trim() || "Your App";
-  const desc = endDot(about);
+  const sentences = about
+    .split(".")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => s + ".");
   const picked = PROBLEMS.filter((p) => problems.includes(p.id));
   const ageText = age === "custom" ? customAge.trim() || "13 to 70" : fmtRange(age);
-  const instText =
-    installs === "custom" ? fmtRange(customInstalls || "1000-5000") : fmtRange(installs);
 
-  const q1 = paid
-    ? `I recruited my testers through a paid tester group. The group provided real people with Android devices who agreed to install ${name}, stay opted in for the full 14-day testing period, and actually use the app. This helped me reach the minimum tester requirement and get feedback from people I did not personally know.`
-    : `I recruited my testers from free tester groups on Facebook and WhatsApp. I posted about ${name} and asked people with Android devices to join the closed test, install the app, and stay opted in for the full 14-day testing period. This helped me reach the minimum tester requirement and get feedback from people I did not personally know.`;
+  const a1 = paid
+    ? `I recruited testers through a paid tester group. They provided real people with Android devices who installed ${name}, stayed opted in for the full 14 days and used the app, giving me feedback from people I did not know personally.`
+    : `I recruited testers from free tester groups on Facebook and WhatsApp. I asked people with Android devices to join, install ${name} and stay opted in for the full 14 days, which gave me feedback from people I did not know personally.`;
 
-  const q2 = paid
-    ? `It was fairly easy. Using a paid tester group meant I did not have to find people one by one. Testers were available quickly, and I could add more when someone dropped out.`
-    : `It was fairly hard. Finding people in free groups took a lot of time, many people agreed but did not follow through, and I had to keep reminding testers to stay opted in. It took persistence, but I got the number of testers I needed.`;
+  const a2 = paid ? "Easy" : "Difficult";
 
-  const q3 = `Testers installed ${name} and went through every page of the app, opening each screen and testing every feature one by one. Many of them repeated the steps several times to check that everything worked properly. They also tried the app on different devices and screen sizes to make sure it ran smoothly everywhere.`;
+  const a3 = `Testers installed ${name} and went through every page, opening each screen and testing every feature one by one. Many repeated the steps several times to check that everything worked, and they tried the app on different devices and screen sizes.`;
 
-  const fbChannel = paid
-    ? `Testers shared their feedback through WhatsApp and Messenger, mostly by messaging me directly.`
-    : `Testers shared their feedback through Messenger and WhatsApp groups, where I asked for opinions and they replied with their thoughts.`;
-  const q4 = `${fbChannel} Their comments covered how easy ${name} was to use and how it looked${
-    picked.length ? `, along with ${list(picked.map((p) => p.fb))}` : ", along with a few small problems they ran into"
-  }. I also checked the crash and error reports in Play Console.`;
+  const channel = paid
+    ? `Testers sent feedback through WhatsApp and Messenger, mostly by messaging me directly.`
+    : `Testers sent feedback through Messenger and WhatsApp groups, where I asked for opinions and they replied.`;
+  const r4 = fitItems(
+    picked.map((p) => p.fb),
+    (items) =>
+      `${channel} Their comments covered ease of use and design, ${
+        items.length ? `plus ${list(items)}` : "plus a few small problems"
+      }. I also checked crash reports in Play Console.`,
+    limit
+  );
 
-  const fixes = picked.length
-    ? list(picked.map((p) => p.fix))
-    : "fixed bugs, improved the flow of the app, and polished the overall experience";
-  const q5 = `I went through every piece of feedback and focused on the issues that affected the most people. Changes made: I ${fixes}. Suggestions that did not fit the core purpose of the app are saved for future updates.`;
+  const fixList = picked.map((p) => p.fix);
+  const r5 = fitItems(
+    fixList,
+    (items) =>
+      `I reviewed all feedback and focused on what affected the most users. Changes: I ${
+        items.length ? list(items) : "fixed bugs and polished the overall experience"
+      }. Ideas outside the app's core purpose are saved for later updates.`,
+    limit
+  );
 
-  const q6 = `${name} is an Android app that helps users get things done simply and in one place.${
-    desc ? ` Here is what it offers: ${desc}` : ""
-  } It is aimed at people aged ${ageText}. The app is designed to be easy to use, so anyone in this age group can pick it up quickly without any special skills or training.`;
+  const r6 = fitItems(
+    sentences,
+    (items) =>
+      [
+        `${name} is an Android app made to help users get things done simply.`,
+        items.join(" "),
+        `It is meant for people aged ${ageText}, and it is easy to pick up without any special skills.`,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    limit
+  );
 
-  const q7 = `${name} is very useful and helps users a lot in their daily life. It makes things easier and faster, and everything is simple to use, so people can get what they need in just a few taps without any confusion. I believe it will be a real help to everyone who uses it.`;
+  const a7 = `${name} is very useful and helps users a lot in daily life. It makes things easier and faster, and everything is simple, so people get what they need in a few taps. I believe it will be a real help to everyone who uses it.`;
 
-  const q8 = `I expect around ${instText} installs in the first year, mainly through social media promotion, word of mouth, and sharing with people who match the target audience.`;
+  const a8 = installs;
 
-  const q9 = `Based on tester feedback and crash reports, I ${fixes}. These updates make ${name} more stable, easier to use, and better prepared for real users.`;
+  const r9 = fitItems(
+    fixList,
+    (items) =>
+      `Based on tester feedback and crash reports, I ${
+        items.length ? list(items) : "fixed bugs and polished the overall experience"
+      }. These updates made ${name} more stable and easier to use.`,
+    limit
+  );
 
-  const q10 = `I decided ${name} was ready because testers could complete the main tasks in the app without major problems. The serious bugs found during testing were fixed, the app ran stably on the devices that were used, and later feedback was mostly small improvement suggestions rather than critical issues. I plan to keep improving the app after launch based on user reviews.`;
+  const a10 = `${name} was ready because testers could finish the main tasks without major problems. Serious bugs were fixed, the app ran stably on the devices used, and recent feedback was only small suggestions. I will keep improving it after launch based on reviews.`;
+
+  const answers = [
+    clamp(a1, limit),
+    clamp(a2, limit),
+    clamp(a3, limit),
+    r4.t,
+    r5.t,
+    r6.t,
+    clamp(a7, limit),
+    clamp(a8, limit),
+    r9.t,
+    clamp(a10, limit),
+  ];
+
+  const qs = [
+    "Q1. How did you recruit your testers?",
+    "Q2. How easy was it to recruit testers for your closed test?",
+    "Q3. Describe how testers engaged with your app during the closed test.",
+    "Q4. Summarize the feedback you received and how you collected it.",
+    "Q5. Which feedback did you act on, and what changes did you make?",
+    "Q6. What is the app for, and who is the intended audience?",
+    "Q7. How does your app provide value to users?",
+    "Q8. How many installs do you expect in your first year?",
+    "Q9. What changes did you make to your app based on the closed test?",
+    "Q10. How did you decide your app is ready for production?",
+  ];
 
   // gap between a question and its answer: 1 blank line
   // gap between questions / sections: 3 blank lines
-  const qa = (q, a) => `${q}\n\n${a}`;
+  const qa = (i) => `${qs[i]}\n\n${answers[i]}`;
 
-  return (
+  const text =
     [
       `${name} – Production Access Answers`,
       `Part 1: About your closed test`,
-      qa("Q1. How did you recruit your testers?", q1),
-      qa("Q2. How easy was it to recruit testers for your closed test?", q2),
-      qa("Q3. Describe how testers engaged with your app during the closed test.", q3),
-      qa("Q4. Summarize the feedback you received and how you collected it.", q4),
-      qa("Q5. Which feedback did you act on, and what changes did you make?", q5),
+      qa(0),
+      qa(1),
+      qa(2),
+      qa(3),
+      qa(4),
       `Part 2: About your app`,
-      qa("Q6. What is the app for, and who is the intended audience?", q6),
-      qa("Q7. How does your app provide value to users?", q7),
-      qa("Q8. How many installs do you expect in your first year?", q8),
+      qa(5),
+      qa(6),
+      qa(7),
       `Part 3: Production readiness`,
-      qa("Q9. What changes did you make to your app based on the closed test?", q9),
-      qa("Q10. How did you decide your app is ready for production?", q10),
-    ].join("\n\n\n\n") + "\n"
-  );
+      qa(8),
+      qa(9),
+    ].join("\n\n\n\n") + "\n";
+
+  return {
+    text,
+    longest: Math.max(...answers.map((a) => a.length)),
+    trimmed: r4.trimmed || r5.trimmed || r6.trimmed || r9.trimmed,
+  };
 }
 
 const box = "rounded-xl border border-slate-700 bg-slate-900/70 p-3";
@@ -131,13 +211,14 @@ export default function App() {
   const [problems, setProblems] = useState([]);
   const [age, setAge] = useState("13-18");
   const [customAge, setCustomAge] = useState("");
-  const [installs, setInstalls] = useState("1000-5000");
-  const [customInstalls, setCustomInstalls] = useState("");
+  const [installs, setInstalls] = useState("0 to 10K");
   const [copied, setCopied] = useState(false);
+  const [limit, setLimit] = useState(300);
 
-  const text = useMemo(
-    () => buildAnswers({ app, paid, about, problems, age, customAge, installs, customInstalls }),
-    [app, paid, about, problems, age, customAge, installs, customInstalls]
+  const { text, longest, trimmed } = useMemo(
+    () =>
+      buildAnswers({ app, paid, about, problems, age, customAge, installs, limit: Math.max(100, Number(limit) || 300) }),
+    [app, paid, about, problems, age, customAge, installs, limit]
   );
 
   const toggle = (id) =>
@@ -233,11 +314,7 @@ export default function App() {
                 {INSTALLS.map((a) => (
                   <Pill key={a} active={installs === a} onClick={() => setInstalls(a)}>{a}</Pill>
                 ))}
-                <Pill active={installs === "custom"} onClick={() => setInstalls("custom")}>Custom</Pill>
               </div>
-              {installs === "custom" && (
-                <input className={input + " mt-2"} placeholder="e.g. 2000-8000" value={customInstalls} onChange={(e) => setCustomInstalls(e.target.value)} />
-              )}
             </div>
           </div>
         </div>
@@ -245,7 +322,17 @@ export default function App() {
         {/* OUTPUT */}
         <div className={box + " flex min-h-[420px] flex-col lg:min-h-0"}>
           <div className="mb-2 flex items-center justify-between">
-            <span className={label + " mb-0"}>Your answers</span>
+            <div className="flex items-center gap-2">
+              <span className={label + " mb-0"}>Your answers</span>
+              <span className="text-[11px] text-slate-500">limit</span>
+              <input
+                type="number"
+                min="100"
+                value={limit}
+                onChange={(e) => setLimit(e.target.value)}
+                className="w-16 rounded-md border border-slate-700 bg-slate-950 px-1.5 py-0.5 text-xs text-slate-200 outline-none focus:border-indigo-500"
+              />
+            </div>
             <div className="flex gap-2">
               <button onClick={copy} className="rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400">
                 {copied ? "Copied ✓" : "Copy"}
@@ -254,6 +341,10 @@ export default function App() {
                 Download .txt
               </button>
             </div>
+          </div>
+          <div className="mb-2 text-[11px] text-slate-500">
+            Longest answer: {longest} / {Math.max(100, Number(limit) || 300)} characters
+            {trimmed && <span className="text-amber-400"> · some selections were left out to fit the limit</span>}
           </div>
           <textarea
             readOnly
