@@ -5,5 +5,101 @@
 html,
 body,
 #root {
-  background: #020617;
+  background: #000;
+}
+
+/* ---------- animated background ---------- */
+.bg-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #000;
+}
+.bg-fx::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 80%);
+}
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(110px);
+  opacity: 0.14;
+  will-change: transform;
+}
+.blob-a {
+  width: 42vw;
+  height: 42vw;
+  top: -14vw;
+  left: -10vw;
+  background: #f59e0b;
+  animation: driftA 22s ease-in-out infinite;
+}
+.blob-b {
+  width: 38vw;
+  height: 38vw;
+  bottom: -16vw;
+  right: -8vw;
+  background: #e11d48;
+  animation: driftB 26s ease-in-out infinite;
+}
+.blob-c {
+  width: 28vw;
+  height: 28vw;
+  top: 35%;
+  left: 45%;
+  background: #6d28d9;
+  opacity: 0.1;
+  animation: driftC 30s ease-in-out infinite;
+}
+@keyframes driftA {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(14vw, 10vh) scale(1.2); }
+}
+@keyframes driftB {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-12vw, -12vh) scale(1.15); }
+}
+@keyframes driftC {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-10vw, 8vh) scale(1.3); }
+}
+
+/* ---------- element animations ---------- */
+.fade-up {
+  opacity: 0;
+  animation: fadeUp 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fadeIn 0.35s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.shimmer {
+  background-size: 220% auto;
+  animation: shimmer 6s linear infinite;
+}
+@keyframes shimmer {
+  to { background-position: 220% center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blob, .shimmer, .fade-up, .fade-in {
+    animation: none !important;
+    opacity: 1;
+  }
 }
