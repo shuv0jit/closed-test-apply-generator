@@ -55,7 +55,7 @@ const CHANNELS = [
   { id: "dm", label: "Direct messages", ph: "direct messages" },
   { id: "em", label: "Email", ph: "email" },
 ];
-const DEFAULT_CH = { paid: ["wa", "ms"], free: ["ms", "wag"] };
+const DEFAULT_CH = { paid: ["wa", "ms"], free: ["ms", "wag"], family: ["wa", "ms", "dm"] };
 
 const AGES = ["13-18", "15-45", "18-45", "13-70"];
 const INSTALLS = ["0 to 10K", "10K to 100K", "100K to 1M"];
@@ -118,6 +118,28 @@ const PATS = {
       "I used free community groups to find testers. People with Android phones joined my test and installed {n}, and I followed up regularly so nobody dropped out early.",
       "Volunteers from free tester groups made up my testing team. They joined from the invite link, installed {n} and kept it for 14 days while I coordinated in the groups.",
       "I recruited from free groups of Android users. Each tester accepted my invite, installed {n} and stayed opted in, and I reminded them in the group when needed.",
+    ],
+    family: [
+      "I recruited my testers from my own circle of friends and family. I sent each of them the test link, and they installed {n} on their Android phones and stayed opted in for the full 14 days.",
+      "My testers were friends and family members with Android devices. I asked them personally to join the closed test, install {n} and stay opted in until the 14 days were over.",
+      "I started with the people I know. Friends and relatives joined the closed test from my invite, installed {n} and used it on their own phones for the full 14 days.",
+      "Recruitment was simple: I invited friends and family who use Android. They opted in, installed {n} and kept testing during the whole 14-day period.",
+      "Friends and family were my testers. I shared the test link with them one by one, reminded them to stay opted in, and they used {n} on their own devices for 14 days.",
+      "I asked people close to me to help. Friends and family members with Android phones joined the test, installed {n} and remained opted in for the 14 days.",
+      "My closed test was run with friends and relatives. Each one has an Android device, accepted my invite, installed {n} and stayed in the test for the entire period.",
+      "I reached out to friends and family on WhatsApp and Messenger and asked them to test {n}. Those with Android phones joined, installed it and stayed opted in for 14 days.",
+      "The testers came from my personal network of friends and family. They opted in through my link, installed {n} and used it on different phones throughout the 14 days.",
+      "I recruited people I trust: friends and family. They installed {n} from the test link and stayed opted in, and I checked in with them regularly during the 14 days.",
+      "Friends and family helped me with the closed test. I invited everyone who has an Android phone, and they installed {n} and stayed enrolled for the whole 14 days.",
+      "I invited my friends and family to be testers. After joining through my link, each of them installed {n} and kept it for the full 14-day period.",
+      "I used my own network for testers. Friends and relatives with Android devices joined, installed {n} and tested it across the 14 days while I stayed in touch with them.",
+      "To find testers I asked friends and family directly. They agreed, opted in, installed {n} and used it on their phones for the complete 14 days.",
+      "My family and friends made up the tester group. I sent the invite, helped a few of them install {n}, and reminded them to stay opted in until the end.",
+      "I recruited through personal contacts, mostly friends and family on Android. They joined the closed test, installed {n} and stayed opted in for 14 days.",
+      "People close to me became my testers. Friends and family joined from the invite link, installed {n} and tested it on their own Android devices for 14 days.",
+      "I asked relatives and friends to join my closed test. Everyone with an Android phone accepted, installed {n} and stayed opted in the entire time.",
+      "The closed test was done with friends and family. I messaged them the link, they installed {n}, and I kept reminding them to stay opted in through the 14 days.",
+      "I built my tester list from friends and family. Each one joined the test, installed {n} on their own Android phone and kept it for the full 14 days.",
     ],
   },
 
@@ -329,7 +351,7 @@ const fit = (make, items, l) => {
   return { t: clamp(clean(make([])), l), cut: items.length > 0, ok: false };
 };
 
-function buildAll({ app, paid, about, problems, chs, age, customAge, installs, pats, limit }) {
+function buildAll({ app, mode, about, problems, chs, age, customAge, installs, pats, limit }) {
   const n = app.trim() || "My App";
   const a = age === "custom" ? customAge.trim() || "13 to 70" : fmtRange(age);
   const sentences = about
@@ -344,8 +366,8 @@ function buildAll({ app, paid, about, problems, chs, age, customAge, installs, p
   let cut = false;
   const out = {};
 
-  out.q1 = clamp(clean(fill(PATS.q1[paid ? "paid" : "free"][pats.q1], { n })), limit);
-  out.q2 = paid ? "Easy" : "Difficult";
+  out.q1 = clamp(clean(fill(PATS.q1[mode][pats.q1], { n })), limit);
+  out.q2 = mode === "free" ? "Difficult" : "Easy";
   out.q3 = clamp(clean(fill(PATS.q3[pats.q3], { n })), limit);
 
   // Q4 - fewer channels / issues if the limit is too tight
@@ -411,34 +433,39 @@ function buildAll({ app, paid, about, problems, chs, age, customAge, installs, p
 }
 
 /* ------------------------------------------------------------------ */
-/*  UI                                                                 */
+/*  UI  (soft / neumorphic - styles live in index.css)                 */
 /* ------------------------------------------------------------------ */
 
-const box = "rounded-2xl border border-white/15 bg-white/[0.06] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl backdrop-saturate-150";
-const label = "mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-zinc-400";
-const input =
-  "w-full rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40";
+const SITE = "https://jittesting.vercel.app";
+const WA = "https://wa.me/8801784679499";
+
+const MODES = [
+  { id: "paid", label: "Paid" },
+  { id: "free", label: "Free (groups)" },
+  { id: "family", label: "Friends & family" },
+];
 
 function Pill({ active, onClick, children }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        "rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition duration-150 active:scale-95 " +
-        (active
-          ? "border-transparent bg-gradient-to-r from-amber-400 to-rose-500 text-white shadow shadow-rose-900/40"
-          : "border-white/15 bg-white/[0.07] text-zinc-300 backdrop-blur-sm hover:border-amber-400/60 hover:text-white")
-      }
-    >
+    <button type="button" onClick={onClick} data-on={active ? "true" : "false"} className="chip">
       {children}
     </button>
   );
 }
 
+const Lbl = ({ children }) => <label className="lbl">{children}</label>;
+
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2Zm0 18.15a8.2 8.2 0 0 1-4.18-1.14l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 1 1 6.97 3.85Zm4.5-6.14c-.25-.12-1.46-.72-1.69-.8-.23-.09-.39-.12-.56.12-.16.25-.64.8-.78.97-.14.16-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.46-.6 1.67-1.18.2-.58.2-1.07.14-1.18-.06-.1-.23-.16-.48-.29Z" />
+    </svg>
+  );
+}
+
 export default function App() {
   const [app, setApp] = useState("");
-  const [paid, setPaidState] = useState(true);
+  const [mode, setModeState] = useState("paid");
   const [about, setAbout] = useState("");
   const [problems, setProblems] = useState([]);
   const [chs, setChs] = useState(DEFAULT_CH.paid);
@@ -452,13 +479,13 @@ export default function App() {
   const L = Math.max(100, Number(limit) || 299);
 
   const { text, items, longest, cut } = useMemo(
-    () => buildAll({ app, paid, about, problems, chs, age, customAge, installs, pats, limit: L }),
-    [app, paid, about, problems, chs, age, customAge, installs, pats, L]
+    () => buildAll({ app, mode, about, problems, chs, age, customAge, installs, pats, limit: L }),
+    [app, mode, about, problems, chs, age, customAge, installs, pats, L]
   );
 
-  const setPaid = (v) => {
-    setPaidState(v);
-    setChs(v ? DEFAULT_CH.paid : DEFAULT_CH.free);
+  const setMode = (v) => {
+    setModeState(v);
+    setChs(DEFAULT_CH[v]);
   };
   const toggle = (setter) => (id) =>
     setter((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -483,7 +510,6 @@ export default function App() {
     setCopied(id);
     setTimeout(() => setCopied(""), 1500);
   };
-  const copy = () => copyText(text, "all");
 
   const download = () => {
     const file = (app.trim() || "closed-testing").replace(/[^\w-]+/g, "-").toLowerCase();
@@ -496,47 +522,60 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen p-3 text-zinc-100 lg:h-screen lg:overflow-hidden">
-      <div className="bg-fx" aria-hidden="true">
-        <div className="blob blob-a" />
-        <div className="blob blob-b" />
-        <div className="blob blob-c" />
-      </div>
-      <div className="relative z-10 mx-auto grid max-w-7xl gap-3 lg:h-full lg:grid-cols-[5fr_6fr]">
-        {/* INPUTS */}
-        <div className="flex flex-col gap-2.5 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
-          <div className="flex items-baseline justify-between px-1">
-            <h1 className="shimmer bg-gradient-to-r from-amber-300 via-rose-400 to-amber-300 bg-clip-text text-xl font-extrabold text-transparent">Closed Test Answer Generator</h1>
-            <span className="text-xs text-zinc-500">Google Play production access</span>
-          </div>
+    <div className="flex min-h-screen flex-col lg:h-screen lg:overflow-hidden">
+      {/* NAVBAR */}
+      <header className="neu mx-4 mt-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-5 py-2.5">
+        <a href={SITE} target="_blank" rel="noreferrer" className="flex items-center gap-3">
+          <span className="logo">JIT</span>
+          <span className="leading-tight">
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Powered by</span>
+            <span className="block text-[15px] font-extrabold text-blue-700">JIT Testing</span>
+            <span className="block text-[11px] font-medium text-blue-500 underline-offset-2 hover:underline">jittesting.vercel.app</span>
+          </span>
+        </a>
 
-          <div className="grid gap-2.5 sm:grid-cols-[3fr_2fr]">
-            <div className={box}>
-              <label className={label}>App name</label>
-              <input className={input} placeholder="e.g. BrandSlip" value={app} onChange={(e) => setApp(e.target.value)} />
+        <p className="min-w-[220px] flex-1 text-center text-[12.5px] font-medium leading-snug text-slate-600">
+          Need paid closed testing for your apps? Contact us, we have over{" "}
+          <b className="font-extrabold text-blue-700">380+ productions</b> now!
+        </p>
+
+        <a href={WA} target="_blank" rel="noreferrer" className="wa-btn">
+          <WhatsAppIcon />
+          Contact now
+        </a>
+      </header>
+
+      <main className="mx-auto grid w-full max-w-7xl flex-1 gap-0 p-1 lg:min-h-0 lg:grid-cols-[5fr_6fr]">
+        {/* INPUTS */}
+        <div className="flex flex-col gap-2.5 p-3 lg:min-h-0 lg:overflow-y-auto">
+          <div className="grid gap-3 sm:grid-cols-[2fr_3fr]">
+            <div className="neu p-3">
+              <Lbl>App name</Lbl>
+              <input className="field" placeholder="e.g. BrandSlip" value={app} onChange={(e) => setApp(e.target.value)} />
             </div>
-            <div className={box}>
-              <label className={label}>Q1 &amp; Q2 · Testers</label>
-              <div className="flex gap-1.5">
-                <Pill active={paid} onClick={() => setPaid(true)}>Paid</Pill>
-                <Pill active={!paid} onClick={() => setPaid(false)}>Free (groups)</Pill>
+            <div className="neu p-3">
+              <Lbl>Q1 &amp; Q2 · Tester source</Lbl>
+              <div className="flex flex-wrap gap-1.5">
+                {MODES.map((m) => (
+                  <Pill key={m.id} active={mode === m.id} onClick={() => setMode(m.id)}>{m.label}</Pill>
+                ))}
               </div>
             </div>
           </div>
 
-          <div className={box}>
-            <label className={label}>Q5 · What does the app do? (each full stop = one feature)</label>
+          <div className="neu p-3">
+            <Lbl>Q5 · What does the app do? (each full stop = one feature)</Lbl>
             <textarea
-              rows={3}
-              className={input + " resize-none"}
+              rows={2}
+              className="field resize-none"
               placeholder="Create branded PDF receipts. Add a logo and business name. Save and share the PDF."
               value={about}
               onChange={(e) => setAbout(e.target.value)}
             />
           </div>
 
-          <div className={box}>
-            <label className={label}>Q4 · Where did feedback come from? (select multiple)</label>
+          <div className="neu p-3">
+            <Lbl>Q4 · Where did feedback come from? (select multiple)</Lbl>
             <div className="flex flex-wrap gap-1.5">
               {CHANNELS.map((c) => (
                 <Pill key={c.id} active={chs.includes(c.id)} onClick={() => toggleChannel(c.id)}>
@@ -546,8 +585,8 @@ export default function App() {
             </div>
           </div>
 
-          <div className={box}>
-            <label className={label}>Q4 &amp; Q8 · Feedback / fixes (select multiple)</label>
+          <div className="neu p-3">
+            <Lbl>Q4 &amp; Q8 · Feedback / fixes (select multiple)</Lbl>
             <div className="flex flex-wrap gap-1.5">
               {PROBLEMS.map((p) => (
                 <Pill key={p.id} active={problems.includes(p.id)} onClick={() => toggleProblem(p.id)}>
@@ -557,9 +596,9 @@ export default function App() {
             </div>
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            <div className={box}>
-              <label className={label}>Q5 · Age group</label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="neu p-3">
+              <Lbl>Q5 · Age group</Lbl>
               <div className="flex flex-wrap gap-1.5">
                 {AGES.map((x) => (
                   <Pill key={x} active={age === x} onClick={() => setAge(x)}>{x}</Pill>
@@ -567,12 +606,12 @@ export default function App() {
                 <Pill active={age === "custom"} onClick={() => setAge("custom")}>Custom</Pill>
               </div>
               {age === "custom" && (
-                <input className={input + " mt-2"} placeholder="e.g. 20 to 60" value={customAge} onChange={(e) => setCustomAge(e.target.value)} />
+                <input className="field mt-3" placeholder="e.g. 20 to 60" value={customAge} onChange={(e) => setCustomAge(e.target.value)} />
               )}
             </div>
 
-            <div className={box}>
-              <label className={label}>Q7 · First-year installs</label>
+            <div className="neu p-3">
+              <Lbl>Q7 · First-year installs</Lbl>
               <div className="flex flex-wrap gap-1.5">
                 {INSTALLS.map((x) => (
                   <Pill key={x} active={installs === x} onClick={() => setInstalls(x)}>{x}</Pill>
@@ -583,76 +622,69 @@ export default function App() {
         </div>
 
         {/* OUTPUT */}
-        <div className={box + " flex min-h-[480px] flex-col lg:min-h-0"}>
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className={label + " mb-0"}>My answers</span>
-              <span className="text-[11px] text-zinc-500">limit</span>
-              <input
-                type="number"
-                min="100"
-                value={limit}
-                onChange={(e) => setLimit(e.target.value)}
-                className="w-16 rounded-md border border-white/15 bg-white/[0.06] px-1.5 py-0.5 text-xs text-zinc-100 outline-none focus:border-amber-400"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={shuffleAll} className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10">
-                ↻ Shuffle all
-              </button>
-              <button onClick={copy} className="rounded-lg bg-gradient-to-r from-amber-400 to-rose-500 px-3 py-1.5 text-xs font-semibold text-white shadow shadow-rose-900/40 hover:brightness-110">
-                {copied === "all" ? "Copied ✓" : "Copy all"}
-              </button>
-              <button onClick={download} className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10">
-                Download .txt
-              </button>
-            </div>
-          </div>
-
-          <div className="mb-2 text-[11px] text-zinc-500">
-            Longest answer: {longest} / {L} characters
-            {cut && <span className="text-amber-300"> · some selections were left out to fit the limit</span>}
-          </div>
-
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
-            {items.map((it) => (
-              <div key={it.id} className="fade-up rounded-xl border border-white/15 bg-white/[0.05] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md transition hover:border-amber-400/40 hover:bg-white/[0.08]" style={{ animationDelay: `${items.indexOf(it) * 50}ms` }}>
-                <div className="mb-0.5 flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold text-amber-300">
-                    {it.dropdown ? (
-                      <>Dropdown answer</>
-                    ) : (
-                      <>
-                        Pattern {it.pat + 1}/{it.total}
-                        <span className="ml-2 font-normal text-zinc-500">{it.a.length} chars</span>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex gap-1.5">
-                    {!it.dropdown && (
-                      <button
-                        onClick={() => shuffleOne(it.id)}
-                        title="Show a different pattern"
-                        className="rounded-md border border-white/15 bg-white/[0.05] px-2 py-0.5 text-[11px] font-semibold text-zinc-200 transition hover:border-amber-400 hover:text-white active:scale-95"
-                      >
-                        ↻ Shuffle
-                      </button>
-                    )}
-                    <button
-                      onClick={() => copyText(it.a, it.id)}
-                      className="rounded-md border border-white/15 bg-white/[0.05] px-2 py-0.5 text-[11px] font-semibold text-zinc-200 transition hover:border-amber-400 hover:text-white active:scale-95"
-                    >
-                      {copied === it.id ? "Copied ✓" : "Copy"}
-                    </button>
-                  </div>
-                </div>
-                <div className="text-[11px] text-zinc-500">{it.q}</div>
-                <p key={it.pat ?? "d"} className="fade-in mt-1 text-[13px] leading-relaxed text-zinc-100">{it.a}</p>
+        <div className="flex min-h-[520px] flex-col p-3 lg:min-h-0">
+          <div className="neu flex min-h-0 flex-1 flex-col p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-[15px] font-extrabold text-slate-800">My answers</h2>
+                <span className="text-[11px] font-medium text-slate-500">limit</span>
+                <input
+                  type="number"
+                  min="100"
+                  value={limit}
+                  onChange={(e) => setLimit(e.target.value)}
+                  className="field !w-[72px] !px-2 !py-1 text-xs"
+                />
               </div>
-            ))}
+              <div className="flex flex-wrap gap-2.5">
+                <button onClick={shuffleAll} className="btn">↻ Shuffle all</button>
+                <button onClick={() => copyText(text, "all")} className="btn-primary">
+                  {copied === "all" ? "Copied ✓" : "Copy all"}
+                </button>
+                <button onClick={download} className="btn">Download .txt</button>
+              </div>
+            </div>
+
+            <div className="mb-3 text-[11px] font-medium text-slate-500">
+              Longest answer: {longest} / {L} characters
+              {cut && <span className="text-amber-600"> · some selections were left out to fit the limit</span>}
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-1.5 pr-2">
+              {items.map((it, i) => (
+                <div key={it.id} className="well fade-up" style={{ animationDelay: `${i * 40}ms` }}>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <div className="text-[11px] font-bold text-blue-600">
+                      {it.dropdown ? (
+                        <>Dropdown answer</>
+                      ) : (
+                        <>
+                          Pattern {it.pat + 1}/{it.total}
+                          <span className="ml-2 font-medium text-slate-400">{it.a.length} chars</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      {!it.dropdown && (
+                        <button onClick={() => shuffleOne(it.id)} title="Show a different pattern" className="btn btn-sm">
+                          ↻ Shuffle
+                        </button>
+                      )}
+                      <button onClick={() => copyText(it.a, it.id)} className="btn btn-sm">
+                        {copied === it.id ? <span className="text-emerald-600">Copied ✓</span> : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-[11px] font-medium text-slate-400">{it.q}</div>
+                  <p key={it.pat ?? "d"} className="fade-in mt-1.5 text-[13px] font-medium leading-relaxed text-slate-700">
+                    {it.a}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
